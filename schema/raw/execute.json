@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "create_market"
+      ],
+      "properties": {
+        "create_market": {
+          "type": "object",
+          "required": [
+            "away_team",
+            "close_ts",
+            "home_team",
+            "kickoff_ts",
+            "league",
+            "oracle"
+          ],
+          "properties": {
+            "away_team": {
+              "type": "string"
+            },
+            "close_ts": {
+              "$ref": "#/definitions/Uint64"
+            },
+            "home_team": {
+              "type": "string"
+            },
+            "kickoff_ts": {
+              "$ref": "#/definitions/Uint64"
+            },
+            "league": {
+              "type": "string"
+            },
+            "oracle": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "place_bet"
+      ],
+      "properties": {
+        "place_bet": {
+          "type": "object",
+          "required": [
+            "market_id",
+            "outcome"
+          ],
+          "properties": {
+            "market_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "outcome": {
+              "$ref": "#/definitions/Outcome"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "settle_market"
+      ],
+      "properties": {
+        "settle_market": {
+          "type": "object",
+          "required": [
+            "market_id",
+            "outcome"
+          ],
+          "properties": {
+            "market_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "outcome": {
+              "$ref": "#/definitions/Outcome"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "cancel_market"
+      ],
+      "properties": {
+        "cancel_market": {
+          "type": "object",
+          "required": [
+            "market_id"
+          ],
+          "properties": {
+            "market_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "claim"
+      ],
+      "properties": {
+        "claim": {
+          "type": "object",
+          "required": [
+            "market_id"
+          ],
+          "properties": {
+            "market_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "refund"
+      ],
+      "properties": {
+        "refund": {
+          "type": "object",
+          "required": [
+            "market_id"
+          ],
+          "properties": {
+            "market_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "withdraw_fees"
+      ],
+      "properties": {
+        "withdraw_fees": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Outcome": {
+      "type": "string",
+      "enum": [
+        "home_win",
+        "draw",
+        "away_win"
+      ]
+    },
+    "Uint64": {
+      "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+      "type": "string"
+    }
+  }
+}

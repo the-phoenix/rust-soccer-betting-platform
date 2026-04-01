@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "stake_denom",
+    "treasury_bps"
+  ],
+  "properties": {
+    "admin": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stake_denom": {
+      "type": "string"
+    },
+    "treasury_bps": {
+      "type": "integer",
+      "format": "uint16",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false
+}

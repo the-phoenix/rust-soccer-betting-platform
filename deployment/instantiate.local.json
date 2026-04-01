@@ -1,0 +1,5 @@
+{
+  "admin": "cosmos1adminaddressreplace",
+  "treasury_bps": 250,
+  "stake_denom": "ucosm"
+}

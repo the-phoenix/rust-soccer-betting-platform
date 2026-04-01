@@ -1,0 +1,10 @@
+{
+  "create_market": {
+    "league": "Premier League",
+    "home_team": "Arsenal",
+    "away_team": "Liverpool",
+    "kickoff_ts": "1767225600",
+    "close_ts": "1767222000",
+    "oracle": "cosmos1oracleaddressreplace"
+  }
+}

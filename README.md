@@ -29,6 +29,35 @@ This project is now a real CosmWasm contract for pooled 1X2 soccer betting marke
 - `QueryMsg::Market`
 - `QueryMsg::Bettor`
 
+## Schema
+
+Generate JSON schema files with:
+
+```bash
+cargo run --bin schema
+```
+
+The generated artifacts land in `schema/` and can be used by frontend clients, deployment tooling, and auditors.
+
+## Deployment Notes
+
+Example payloads and a deployment walkthrough live under `deployment/`.
+
+Typical flow:
+
+```bash
+cargo test
+cargo run --bin schema
+cargo build --release --target wasm32-unknown-unknown
+```
+
+Then:
+
+- store the compiled wasm on-chain
+- instantiate with `deployment/instantiate.local.json`
+- create markets with `deployment/create-market.example.json`
+- call `place_bet`, `settle_market`, `cancel_market`, `claim`, or `refund` as needed
+
 ## Current Model
 
 The contract uses a pari-mutuel pool per outcome. All bets for a market are escrowed in the contract. When an oracle settles the match result after kickoff:
