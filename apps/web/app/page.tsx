@@ -7,6 +7,7 @@ import {
   queryBettor,
   queryConfig,
   queryMarket,
+  queryMarkets,
 } from "../lib/contract-client";
 import { appConfig, hasRequiredChainConfig } from "../lib/config";
 import type {
@@ -54,6 +55,7 @@ export default function HomePage() {
   const [configData, setConfigData] = useState<ConfigResponse | null>(null);
   const [marketData, setMarketData] = useState<MarketResponse | null>(null);
   const [bettorData, setBettorData] = useState<BettorResponse | null>(null);
+  const [marketList, setMarketList] = useState<MarketResponse[]>([]);
   const [createMarket, setCreateMarket] = useState(initialCreateMarket);
   const [placeBet, setPlaceBet] = useState(initialPlaceBet);
   const [settleMarket, setSettleMarket] = useState(initialSettle);
@@ -65,7 +67,12 @@ export default function HomePage() {
       setFeedback(
         "Missing chain configuration. Copy apps/web/.env.example to .env.local and fill in your chain values.",
       );
+      return;
     }
+
+    startTransition(() => {
+      void loadMarketExplorer();
+    });
   }, []);
 
   async function runAction(label: string, action: () => Promise<void>) {
@@ -90,7 +97,30 @@ export default function HomePage() {
     return connection;
   }
 
-  function withExecute(message: ExecuteMessage, label: string, funds?: { amount: string; denom: string }[]) {
+  async function loadMarketExplorer() {
+    const [config, markets] = await Promise.all([queryConfig(), queryMarkets()]);
+    setConfigData(config);
+    setMarketList(markets);
+    if (!marketData && markets[0]) {
+      setMarketData(markets[0]);
+      setLookup((current) => ({ ...current, marketId: String(markets[0].market_id) }));
+      setPlaceBet((current) => ({ ...current, marketId: String(markets[0].market_id) }));
+      setSettleMarket((current) => ({ ...current, marketId: String(markets[0].market_id) }));
+    }
+    setFeedback(`Loaded ${markets.length} recent markets.`);
+  }
+
+  function syncMarketId(marketId: string) {
+    setLookup((current) => ({ ...current, marketId }));
+    setPlaceBet((current) => ({ ...current, marketId }));
+    setSettleMarket((current) => ({ ...current, marketId }));
+  }
+
+  function withExecute(
+    message: ExecuteMessage,
+    label: string,
+    funds?: { amount: string; denom: string }[],
+  ) {
     return runAction(label, async () => {
       const connection = await ensureWallet();
       const result = await executeContract(
@@ -100,6 +130,7 @@ export default function HomePage() {
         funds,
       );
       setFeedback(`${label} submitted: ${result.transactionHash}`);
+      await loadMarketExplorer();
     });
   }
 
@@ -110,9 +141,9 @@ export default function HomePage() {
           <p className="eyebrow">PitchPool Control Room</p>
           <h1>Drive every contract action from one betting console.</h1>
           <p className="lede">
-            Query config and market state, connect a Keplr wallet, place bets,
-            settle or cancel markets, then claim payouts or refunds against the
-            deployed CosmWasm contract.
+            Query config and market state, browse recent markets, connect a
+            Keplr wallet, place bets, settle or cancel markets, then claim
+            payouts or refunds against the deployed CosmWasm contract.
           </p>
         </div>
         <div className="masthead-side">
@@ -156,6 +187,65 @@ export default function HomePage() {
       </section>
 
       <section className="console-grid">
+        <article className="console-card explorer-card">
+          <div className="card-heading">
+            <h2>Market Explorer</h2>
+            <p>
+              Recent markets are derived from <code>next_market_id</code> and
+              loaded newest-first from contract queries.
+            </p>
+          </div>
+          <div className="button-row">
+            <button
+              className="ghost-button"
+              disabled={busyAction === "Refresh explorer" || !hasRequiredChainConfig()}
+              onClick={() => runAction("Refresh explorer", loadMarketExplorer)}
+            >
+              Refresh Markets
+            </button>
+          </div>
+          <div className="market-list">
+            {marketList.length > 0 ? (
+              marketList.map((market) => (
+                <button
+                  key={market.market_id}
+                  className={`market-tile ${marketData?.market_id === market.market_id ? "market-tile-active" : ""}`}
+                  onClick={() =>
+                    runAction("Select market", async () => {
+                      startTransition(() => {
+                        setMarketData(market);
+                        syncMarketId(String(market.market_id));
+                      });
+                      setFeedback(`Market ${market.market_id} selected.`);
+                    })
+                  }
+                >
+                  <div className="market-tile-top">
+                    <strong>#{market.market_id}</strong>
+                    <span className={`status-pill status-${market.status}`}>{market.status}</span>
+                  </div>
+                  <h3>
+                    {market.home_team} vs {market.away_team}
+                  </h3>
+                  <p>{market.league}</p>
+                  <dl>
+                    <div>
+                      <dt>Kickoff</dt>
+                      <dd>{formatTimestamp(market.kickoff_ts)}</dd>
+                    </div>
+                    <div>
+                      <dt>Total</dt>
+                      <dd>{market.total_staked}</dd>
+                    </div>
+                  </dl>
+                </button>
+              ))
+            ) : (
+              <EmptyState label="No markets loaded yet. Refresh after you create the first market." />
+            )}
+          </div>
+        </article>
+
         <article className="console-card">
           <div className="card-heading">
             <h2>Read State</h2>
@@ -182,9 +272,10 @@ export default function HomePage() {
               <span>Market ID</span>
               <input
                 value={lookup.marketId}
-                onChange={(event) =>
-                  setLookup((current) => ({ ...current, marketId: event.target.value }))
-                }
+                onChange={(event) => {
+                  const marketId = event.target.value;
+                  setLookup((current) => ({ ...current, marketId }));
+                }}
               />
             </label>
 
@@ -198,6 +289,7 @@ export default function HomePage() {
                   );
                   startTransition(() => {
                     setMarketData(response);
+                    syncMarketId(String(response.market_id));
                   });
                   setFeedback("Market loaded.");
                 })
@@ -321,8 +413,10 @@ export default function HomePage() {
             Create Market
           </button>
         </article>
+      </section>
 
-        <article className="console-card">
+      <section className="console-grid">
+        <article className="console-card full-span">
           <div className="card-heading">
             <h2>Betting Actions</h2>
             <p>Better, admin, and oracle transactions mapped to contract executes.</p>

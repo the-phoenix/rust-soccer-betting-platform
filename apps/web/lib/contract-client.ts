@@ -31,6 +31,27 @@ export async function queryMarket(marketId: number) {
   }) as Promise<MarketResponse>;
 }
 
+export async function queryMarkets(limit = 12) {
+  const config = await queryConfig();
+  const highestMarketId = Math.max(config.next_market_id - 1, 0);
+  const marketIds = Array.from(
+    { length: Math.min(limit, highestMarketId) },
+    (_, index) => highestMarketId - index,
+  ).filter((marketId) => marketId > 0);
+
+  const markets = await Promise.all(
+    marketIds.map(async (marketId) => {
+      try {
+        return await queryMarket(marketId);
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return markets.filter((market): market is MarketResponse => market !== null);
+}
+
 export async function queryBettor(marketId: number, bettor: string) {
   const client = await connectQueryClient();
   return client.queryContractSmart(appConfig.contractAddress, {

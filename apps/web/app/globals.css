@@ -141,6 +141,10 @@ select {
   line-height: 1.62;
 }
 
+.card-heading code {
+  color: var(--sky);
+}
+
 .stack,
 .form-grid {
   display: grid;
@@ -157,6 +161,93 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 18px;
+}
+
+.explorer-card {
+  grid-column: span 2;
+}
+
+.full-span {
+  grid-column: 1 / -1;
+}
+
+.market-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.market-tile {
+  padding: 16px;
+  text-align: left;
+  border-radius: 20px;
+  border: 1px solid rgba(160, 214, 255, 0.12);
+  background: rgba(8, 18, 28, 0.85);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.market-tile-active {
+  border-color: rgba(249, 191, 80, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(249, 191, 80, 0.14);
+}
+
+.market-tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.market-tile h3 {
+  margin: 14px 0 6px;
+  font-size: 1.05rem;
+}
+
+.market-tile p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.market-tile dl {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.market-tile dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.status-open {
+  background: rgba(157, 244, 203, 0.12);
+  color: var(--mint);
+}
+
+.status-settled {
+  background: rgba(105, 216, 255, 0.12);
+  color: var(--sky);
+}
+
+.status-cancelled {
+  background: rgba(255, 123, 107, 0.12);
+  color: var(--rose);
 }
 
 .field {
@@ -258,6 +349,15 @@ select {
   .masthead,
   .console-grid,
   .data-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .explorer-card,
+  .full-span {
+    grid-column: auto;
+  }
+
+  .market-list {
     grid-template-columns: 1fr;
   }
 }
