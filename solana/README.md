@@ -6,6 +6,8 @@ This directory contains a Solana reimplementation of the soccer betting contract
 
 - `programs/soccer-betting-anchor`
   Anchor program for pooled 1X2 soccer betting with market creation, bets, settlement, cancellation, claims, refunds, and fee withdrawal.
+- `../apps/solana-web`
+  Next.js frontend for querying and driving the Solana program.
 
 ## Notes
 
