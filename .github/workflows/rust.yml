@@ -98,6 +98,9 @@ jobs:
           solana-cli-version: 2.2.21
           node-version: 20.11.0
 
+      - name: Install Anchor test dependencies
+        run: npm ci
+
       - name: Show tool versions
         run: |
           rustc -V
@@ -105,6 +108,7 @@ jobs:
           solana --version
           anchor --version
           node --version
+          npm --version
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -117,6 +121,9 @@ jobs:
 
       - name: Anchor build
         run: anchor build
+
+      - name: Typecheck Anchor tests
+        run: npx tsc --noEmit
 
       - name: Anchor test
         timeout-minutes: 20
