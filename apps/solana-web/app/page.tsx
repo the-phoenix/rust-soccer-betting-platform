@@ -13,7 +13,17 @@ import type {
   BettorResponse,
   ConfigResponse,
   MarketResponse,
+  Outcome,
 } from "../lib/contract-types";
+import {
+  cancelMarket,
+  claim,
+  createMarket,
+  placeBet,
+  refund,
+  settleMarket,
+  withdrawFees,
+} from "../lib/execute-client";
 import {
   formatTimestamp,
   lamportsToSol,
@@ -25,7 +35,27 @@ import {
   readActivityHistory,
   type ActivityEntry,
 } from "../lib/history";
-import { connectWallet } from "../lib/wallet";
+import { connectWallet, type SolanaWallet } from "../lib/wallet";
+
+const initialCreateMarket = {
+  league: "Premier League",
+  homeTeam: "Arsenal",
+  awayTeam: "Liverpool",
+  kickoffTs: "",
+  closeTs: "",
+  oracle: "",
+};
+
+const initialPlaceBet = {
+  marketId: "1",
+  outcome: "home_win" as Outcome,
+  amount: "100000000",
+};
+
+const initialSettle = {
+  marketId: "1",
+  outcome: "home_win" as Outcome,
+};
 
 const initialLookup = {
   marketId: "1",
@@ -34,6 +64,7 @@ const initialLookup = {
 
 export default function HomePage() {
   const [walletAddress, setWalletAddress] = useState("");
+  const [wallet, setWallet] = useState<SolanaWallet | null>(null);
   const [busyAction, setBusyAction] = useState("");
   const [feedback, setFeedback] = useState(
     "Configure Solana env vars, then connect a wallet.",
@@ -43,6 +74,9 @@ export default function HomePage() {
   const [bettorData, setBettorData] = useState<BettorResponse | null>(null);
   const [marketList, setMarketList] = useState<MarketResponse[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [createMarketForm, setCreateMarketForm] = useState(initialCreateMarket);
+  const [placeBetForm, setPlaceBetForm] = useState(initialPlaceBet);
+  const [settleForm, setSettleForm] = useState(initialSettle);
   const [lookup, setLookup] = useState(initialLookup);
   const deferredMarketId = useDeferredValue(lookup.marketId);
 
@@ -80,7 +114,7 @@ export default function HomePage() {
 
     if (!marketData && markets[0]) {
       setMarketData(markets[0]);
-      setLookup((current) => ({ ...current, marketId: String(markets[0].market_id) }));
+      syncMarketId(String(markets[0].market_id));
     }
 
     setFeedback(`Loaded ${markets.length} recent markets from Solana.`);
@@ -88,6 +122,8 @@ export default function HomePage() {
 
   function syncMarketId(marketId: string) {
     setLookup((current) => ({ ...current, marketId }));
+    setPlaceBetForm((current) => ({ ...current, marketId }));
+    setSettleForm((current) => ({ ...current, marketId }));
   }
 
   function recordQuery(label: string, detail: string) {
@@ -98,6 +134,38 @@ export default function HomePage() {
         detail,
       }),
     );
+  }
+
+  function recordExecution(label: string, detail: string, signature?: string) {
+    setActivity(
+      pushActivityEntry({
+        kind: "execute",
+        label,
+        detail,
+        signature,
+      }),
+    );
+  }
+
+  async function ensureWallet() {
+    if (wallet && walletAddress) {
+      return { wallet, address: walletAddress };
+    }
+
+    const connection = await connectWallet();
+    setWallet(connection.wallet);
+    setWalletAddress(connection.address);
+    return { wallet: connection.wallet, address: connection.address };
+  }
+
+  function withExecute(label: string, action: (wallet: SolanaWallet, address: string) => Promise<{ signature: string }>) {
+    return runAction(label, async () => {
+      const connection = await ensureWallet();
+      const result = await action(connection.wallet, connection.address);
+      recordExecution(label, label, result.signature);
+      setFeedback(`${label} submitted: ${result.signature}`);
+      await loadExplorer();
+    });
   }
 
   async function refreshSelectedMarket() {
@@ -138,10 +206,15 @@ export default function HomePage() {
             onClick={() =>
               runAction("Wallet connect", async () => {
                 const connection = await connectWallet();
+                setWallet(connection.wallet);
                 setWalletAddress(connection.address);
                 setLookup((current) => ({
                   ...current,
                   bettor: current.bettor || connection.address,
+                }));
+                setCreateMarketForm((current) => ({
+                  ...current,
+                  oracle: current.oracle || connection.address,
                 }));
                 setFeedback(`Wallet connected: ${connection.address}`);
               })
@@ -267,6 +340,290 @@ export default function HomePage() {
             >
               Load Bettor
             </button>
+          </div>
+        </article>
+
+        <article className="console-card full-span">
+          <div className="card-heading">
+            <h2>Write Actions</h2>
+            <p>These controls submit transactions directly to the Anchor program.</p>
+          </div>
+
+          <div className="form-grid">
+            <label className="field">
+              <span>League</span>
+              <input
+                value={createMarketForm.league}
+                onChange={(event) =>
+                  setCreateMarketForm((current) => ({
+                    ...current,
+                    league: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Oracle</span>
+              <input
+                value={createMarketForm.oracle}
+                onChange={(event) =>
+                  setCreateMarketForm((current) => ({
+                    ...current,
+                    oracle: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Home Team</span>
+              <input
+                value={createMarketForm.homeTeam}
+                onChange={(event) =>
+                  setCreateMarketForm((current) => ({
+                    ...current,
+                    homeTeam: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Away Team</span>
+              <input
+                value={createMarketForm.awayTeam}
+                onChange={(event) =>
+                  setCreateMarketForm((current) => ({
+                    ...current,
+                    awayTeam: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Kickoff Timestamp</span>
+              <input
+                placeholder="Unix seconds"
+                value={createMarketForm.kickoffTs}
+                onChange={(event) =>
+                  setCreateMarketForm((current) => ({
+                    ...current,
+                    kickoffTs: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Close Timestamp</span>
+              <input
+                placeholder="Unix seconds"
+                value={createMarketForm.closeTs}
+                onChange={(event) =>
+                  setCreateMarketForm((current) => ({
+                    ...current,
+                    closeTs: event.target.value,
+                  }))
+                }
+              />
+            </label>
+          </div>
+          <div className="button-row">
+            <button
+              className="primary-button"
+              disabled={busyAction === "Create market"}
+              onClick={() =>
+                withExecute("Create market", (connectedWallet, address) =>
+                  createMarket(
+                    {
+                      signerAddress: address,
+                      league: createMarketForm.league,
+                      homeTeam: createMarketForm.homeTeam,
+                      awayTeam: createMarketForm.awayTeam,
+                      kickoffTs: parseInteger(
+                        createMarketForm.kickoffTs,
+                        "kickoff timestamp",
+                      ),
+                      closeTs: parseInteger(
+                        createMarketForm.closeTs,
+                        "close timestamp",
+                      ),
+                      oracle: createMarketForm.oracle || address,
+                    },
+                    connectedWallet,
+                  ),
+                )
+              }
+            >
+              Create Market
+            </button>
+          </div>
+
+          <div className="compact-group">
+            <label className="field">
+              <span>Bet Market ID</span>
+              <input
+                value={placeBetForm.marketId}
+                onChange={(event) =>
+                  setPlaceBetForm((current) => ({
+                    ...current,
+                    marketId: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Outcome</span>
+              <select
+                value={placeBetForm.outcome}
+                onChange={(event) =>
+                  setPlaceBetForm((current) => ({
+                    ...current,
+                    outcome: event.target.value as Outcome,
+                  }))
+                }
+              >
+                <option value="home_win">Home Win</option>
+                <option value="draw">Draw</option>
+                <option value="away_win">Away Win</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Stake Lamports</span>
+              <input
+                value={placeBetForm.amount}
+                onChange={(event) =>
+                  setPlaceBetForm((current) => ({
+                    ...current,
+                    amount: event.target.value,
+                  }))
+                }
+              />
+            </label>
+          </div>
+          <div className="button-row">
+            <button
+              className="ghost-button"
+              disabled={busyAction === "Place bet"}
+              onClick={() =>
+                withExecute("Place bet", (connectedWallet, address) =>
+                  placeBet(
+                    address,
+                    connectedWallet,
+                    parseInteger(placeBetForm.marketId, "bet market id"),
+                    placeBetForm.outcome,
+                    parseInteger(placeBetForm.amount, "stake lamports"),
+                  ),
+                )
+              }
+            >
+              Place Bet
+            </button>
+            <button
+              className="ghost-button"
+              disabled={busyAction === "Claim"}
+              onClick={() =>
+                withExecute("Claim", (connectedWallet, address) =>
+                  claim(
+                    address,
+                    connectedWallet,
+                    parseInteger(placeBetForm.marketId, "claim market id"),
+                  ),
+                )
+              }
+            >
+              Claim
+            </button>
+            <button
+              className="ghost-button"
+              disabled={busyAction === "Refund"}
+              onClick={() =>
+                withExecute("Refund", (connectedWallet, address) =>
+                  refund(
+                    address,
+                    connectedWallet,
+                    parseInteger(placeBetForm.marketId, "refund market id"),
+                  ),
+                )
+              }
+            >
+              Refund
+            </button>
+          </div>
+
+          <div className="compact-group">
+            <label className="field">
+              <span>Settle Market ID</span>
+              <input
+                value={settleForm.marketId}
+                onChange={(event) =>
+                  setSettleForm((current) => ({
+                    ...current,
+                    marketId: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field">
+              <span>Outcome</span>
+              <select
+                value={settleForm.outcome}
+                onChange={(event) =>
+                  setSettleForm((current) => ({
+                    ...current,
+                    outcome: event.target.value as Outcome,
+                  }))
+                }
+              >
+                <option value="home_win">Home Win</option>
+                <option value="draw">Draw</option>
+                <option value="away_win">Away Win</option>
+              </select>
+            </label>
+            <div className="field">
+              <span>Operator Actions</span>
+              <div className="button-row inline-actions">
+                <button
+                  className="ghost-button"
+                  disabled={busyAction === "Settle market"}
+                  onClick={() =>
+                    withExecute("Settle market", (connectedWallet, address) =>
+                      settleMarket(
+                        address,
+                        connectedWallet,
+                        parseInteger(settleForm.marketId, "settle market id"),
+                        settleForm.outcome,
+                      ),
+                    )
+                  }
+                >
+                  Settle
+                </button>
+                <button
+                  className="ghost-button"
+                  disabled={busyAction === "Cancel market"}
+                  onClick={() =>
+                    withExecute("Cancel market", (connectedWallet, address) =>
+                      cancelMarket(
+                        address,
+                        connectedWallet,
+                        parseInteger(settleForm.marketId, "cancel market id"),
+                      ),
+                    )
+                  }
+                >
+                  Cancel
+                </button>
+                <button
+                  className="ghost-button"
+                  disabled={busyAction === "Withdraw fees"}
+                  onClick={() =>
+                    withExecute("Withdraw fees", (connectedWallet, address) =>
+                      withdrawFees(address, connectedWallet),
+                    )
+                  }
+                >
+                  Withdraw Fees
+                </button>
+              </div>
+            </div>
           </div>
         </article>
       </section>

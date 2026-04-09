@@ -34,7 +34,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -144,8 +145,20 @@ input {
   color: var(--teal);
 }
 
-.stack {
+.stack,
+.form-grid {
   display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compact-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 18px;
 }
@@ -223,7 +236,8 @@ input {
   font-size: 0.88rem;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-height: 46px;
   padding: 0 14px;
@@ -242,6 +256,10 @@ input {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 18px;
+}
+
+.inline-actions {
+  margin-top: 0;
 }
 
 .primary-button,
@@ -397,6 +415,11 @@ input {
 
   .status-list div,
   .data-list div {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid,
+  .compact-group {
     grid-template-columns: 1fr;
   }
 
