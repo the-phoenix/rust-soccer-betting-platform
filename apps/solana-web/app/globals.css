@@ -325,6 +325,16 @@ select {
   color: var(--rose);
 }
 
+.status-success {
+  background: rgba(124, 227, 190, 0.12);
+  color: var(--teal);
+}
+
+.status-error {
+  background: rgba(255, 139, 124, 0.12);
+  color: var(--rose);
+}
+
 .empty-state {
   margin: 18px 0 0;
   color: var(--muted);
@@ -340,6 +350,7 @@ select {
 
 .history-top {
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .history-top time {
@@ -361,6 +372,11 @@ select {
   margin-top: 12px;
   color: var(--gold);
   overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.history-hash:hover {
+  text-decoration: underline;
 }
 
 .feedback-bar {
@@ -382,6 +398,32 @@ select {
 
 .feedback-bar p {
   margin: 0;
+}
+
+.feedback-info {
+  border-color: rgba(125, 191, 255, 0.22);
+  background: linear-gradient(140deg, rgba(125, 191, 255, 0.08), rgba(12, 24, 36, 0.88));
+}
+
+.feedback-success {
+  border-color: rgba(124, 227, 190, 0.22);
+  background: linear-gradient(140deg, rgba(124, 227, 190, 0.08), rgba(12, 24, 36, 0.88));
+}
+
+.feedback-error {
+  border-color: rgba(255, 139, 124, 0.22);
+  background: linear-gradient(140deg, rgba(255, 139, 124, 0.08), rgba(12, 24, 36, 0.88));
+}
+
+.feedback-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.feedback-link:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 1080px) {

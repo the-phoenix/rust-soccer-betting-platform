@@ -1,6 +1,7 @@
 export type ActivityEntry = {
   id: string;
   kind: "query" | "execute";
+  status: "success" | "error";
   label: string;
   detail: string;
   timestamp: string;

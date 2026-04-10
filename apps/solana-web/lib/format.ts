@@ -34,6 +34,59 @@ export function parsePublicKey(value: string, field: string) {
   return trimmed;
 }
 
+export function normalizeActionError(error: unknown) {
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "Unknown error";
+
+  const cleaned = raw
+    .replace(/^Error:\s*/i, "")
+    .replace(/failed to send transaction:\s*/i, "")
+    .replace(/transaction simulation failed:\s*/i, "")
+    .replace(/simulation failed:\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (cleaned.includes("User rejected")) {
+    return "Wallet rejected the request.";
+  }
+  if (cleaned.includes("custom program error")) {
+    return `Program rejected the transaction. ${cleaned}`;
+  }
+
+  return cleaned || "Unknown error";
+}
+
+export function getSignatureUrl(signature: string, clusterName: string) {
+  const baseUrl = `https://explorer.solana.com/tx/${signature}`;
+  const cluster = normalizeClusterName(clusterName);
+
+  if (!cluster) {
+    return baseUrl;
+  }
+
+  return `${baseUrl}?cluster=${cluster}`;
+}
+
+function normalizeClusterName(clusterName: string) {
+  const normalized = clusterName.toLowerCase();
+
+  if (normalized.includes("dev")) {
+    return "devnet";
+  }
+  if (normalized.includes("test")) {
+    return "testnet";
+  }
+  if (normalized.includes("local")) {
+    return "custom";
+  }
+
+  return "";
+}
+
 export function lamportsToSol(value: string) {
   const lamports = Number(value);
   if (Number.isNaN(lamports)) {

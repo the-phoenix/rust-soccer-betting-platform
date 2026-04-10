@@ -27,7 +27,9 @@ import {
 } from "../lib/execute-client";
 import {
   formatTimestamp,
+  getSignatureUrl,
   lamportsToSol,
+  normalizeActionError,
   parseInteger,
   shortenAddress,
 } from "../lib/format";
@@ -69,6 +71,8 @@ const initialLookup = {
 };
 
 export default function HomePage() {
+  const [feedbackTone, setFeedbackTone] = useState<"info" | "success" | "error">("info");
+  const [feedbackSignature, setFeedbackSignature] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [wallet, setWallet] = useState<SolanaWallet | null>(null);
   const [busyAction, setBusyAction] = useState("");
@@ -107,8 +111,18 @@ export default function HomePage() {
     try {
       await action();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
+      const message = normalizeActionError(error);
+      setFeedbackTone("error");
+      setFeedbackSignature("");
       setFeedback(`${label} failed: ${message}`);
+      setActivity(
+        pushActivityEntry({
+          kind: "execute",
+          status: "error",
+          label,
+          detail: message,
+        }),
+      );
     } finally {
       setBusyAction("");
     }
@@ -125,6 +139,8 @@ export default function HomePage() {
         syncMarketId(String(markets[0].market_id));
       }
 
+      setFeedbackTone("success");
+      setFeedbackSignature("");
       setFeedback(`Loaded ${markets.length} recent markets from Solana.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -133,6 +149,8 @@ export default function HomePage() {
         setMarketData(null);
         setMarketList([]);
         setBettorData(null);
+        setFeedbackTone("info");
+        setFeedbackSignature("");
         setFeedback(
           "Solana program is not initialized yet. Connect a wallet and use Initialize before creating markets.",
         );
@@ -153,6 +171,7 @@ export default function HomePage() {
     setActivity(
       pushActivityEntry({
         kind: "query",
+        status: "success",
         label,
         detail,
       }),
@@ -163,6 +182,7 @@ export default function HomePage() {
     setActivity(
       pushActivityEntry({
         kind: "execute",
+        status: "success",
         label,
         detail,
         signature,
@@ -185,8 +205,10 @@ export default function HomePage() {
     return runAction(label, async () => {
       const connection = await ensureWallet();
       const result = await action(connection.wallet, connection.address);
-      recordExecution(label, label, result.signature);
-      setFeedback(`${label} submitted: ${result.signature}`);
+      recordExecution(label, `${label} submitted successfully.`, result.signature);
+      setFeedbackTone("success");
+      setFeedbackSignature(result.signature);
+      setFeedback(`${label} submitted successfully.`);
       await loadExplorer();
     });
   }
@@ -243,6 +265,8 @@ export default function HomePage() {
                   ...current,
                   admin: current.admin || connection.address,
                 }));
+                setFeedbackTone("success");
+                setFeedbackSignature("");
                 setFeedback(`Wallet connected: ${connection.address}`);
               })
             }
@@ -295,6 +319,8 @@ export default function HomePage() {
                     runAction("Select market", async () => {
                       setMarketData(market);
                       syncMarketId(String(market.market_id));
+                      setFeedbackTone("info");
+                      setFeedbackSignature("");
                       setFeedback(`Market ${market.market_id} selected.`);
                     })
                   }
@@ -857,6 +883,7 @@ export default function HomePage() {
                 <article key={entry.id} className="history-item">
                   <div className="history-top">
                     <span className={`status-pill status-${entry.kind}`}>{entry.kind}</span>
+                    <span className={`status-pill status-${entry.status}`}>{entry.status}</span>
                     <time dateTime={entry.timestamp}>
                       {new Date(entry.timestamp).toLocaleString()}
                     </time>
@@ -864,7 +891,14 @@ export default function HomePage() {
                   <strong>{entry.label}</strong>
                   <p>{entry.detail}</p>
                   {entry.signature ? (
-                    <span className="history-hash">{entry.signature}</span>
+                    <a
+                      className="history-hash"
+                      href={getSignatureUrl(entry.signature, appConfig.clusterName)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {shortenAddress(entry.signature)}
+                    </a>
                   ) : null}
                 </article>
               ))}
@@ -875,9 +909,19 @@ export default function HomePage() {
         </article>
       </section>
 
-      <section className="feedback-bar">
+      <section className={`feedback-bar feedback-${feedbackTone}`}>
         <span className="feedback-label">Status</span>
         <p>{feedback}</p>
+        {feedbackSignature ? (
+          <a
+            className="feedback-link"
+            href={getSignatureUrl(feedbackSignature, appConfig.clusterName)}
+            rel="noreferrer"
+            target="_blank"
+          >
+            View transaction {shortenAddress(feedbackSignature)}
+          </a>
+        ) : null}
       </section>
     </main>
   );
