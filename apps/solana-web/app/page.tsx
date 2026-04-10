@@ -201,6 +201,37 @@ export default function HomePage() {
     return { wallet: connection.wallet, address: connection.address };
   }
 
+  async function copyValue(label: string, value: string) {
+    await navigator.clipboard.writeText(value);
+    setFeedbackTone("success");
+    setFeedbackSignature("");
+    setFeedback(`${label} copied to clipboard.`);
+  }
+
+  async function refreshFocusedData() {
+    const tasks: Promise<void>[] = [loadExplorer()];
+
+    if (marketData) {
+      const marketId = marketData.market_id;
+      tasks.push(
+        queryMarket(marketId).then((market) => {
+          setMarketData(market);
+        }),
+      );
+    }
+
+    if (bettorData && lookup.bettor) {
+      const marketId = parseInteger(lookup.marketId, "market id");
+      tasks.push(
+        queryBettor(marketId, lookup.bettor).then((bettor) => {
+          setBettorData(bettor);
+        }),
+      );
+    }
+
+    await Promise.all(tasks);
+  }
+
   function withExecute(label: string, action: (wallet: SolanaWallet, address: string) => Promise<{ signature: string }>) {
     return runAction(label, async () => {
       const connection = await ensureWallet();
@@ -209,7 +240,7 @@ export default function HomePage() {
       setFeedbackTone("success");
       setFeedbackSignature(result.signature);
       setFeedback(`${label} submitted successfully.`);
-      await loadExplorer();
+      await refreshFocusedData();
     });
   }
 
@@ -740,11 +771,27 @@ export default function HomePage() {
             <dl className="data-list">
               <div>
                 <dt>Address</dt>
-                <dd>{configData.address}</dd>
+                <dd className="value-with-action">
+                  <span>{configData.address}</span>
+                  <button
+                    className="inline-copy"
+                    onClick={() => runAction("Copy config address", () => copyValue("Config address", configData.address))}
+                  >
+                    Copy
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>Admin</dt>
-                <dd>{configData.admin}</dd>
+                <dd className="value-with-action">
+                  <span>{configData.admin}</span>
+                  <button
+                    className="inline-copy"
+                    onClick={() => runAction("Copy admin address", () => copyValue("Admin address", configData.admin))}
+                  >
+                    Copy
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>Treasury Bps</dt>
@@ -773,7 +820,15 @@ export default function HomePage() {
             <dl className="data-list">
               <div>
                 <dt>Address</dt>
-                <dd>{marketData.address}</dd>
+                <dd className="value-with-action">
+                  <span>{marketData.address}</span>
+                  <button
+                    className="inline-copy"
+                    onClick={() => runAction("Copy market address", () => copyValue("Market address", marketData.address))}
+                  >
+                    Copy
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>Teams</dt>
@@ -787,7 +842,15 @@ export default function HomePage() {
               </div>
               <div>
                 <dt>Oracle</dt>
-                <dd>{marketData.oracle}</dd>
+                <dd className="value-with-action">
+                  <span>{marketData.oracle}</span>
+                  <button
+                    className="inline-copy"
+                    onClick={() => runAction("Copy oracle address", () => copyValue("Oracle address", marketData.oracle))}
+                  >
+                    Copy
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>Kickoff</dt>
@@ -836,15 +899,39 @@ export default function HomePage() {
             <dl className="data-list">
               <div>
                 <dt>Address</dt>
-                <dd>{bettorData.address}</dd>
+                <dd className="value-with-action">
+                  <span>{bettorData.address}</span>
+                  <button
+                    className="inline-copy"
+                    onClick={() => runAction("Copy ledger address", () => copyValue("Ledger address", bettorData.address))}
+                  >
+                    Copy
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>Bettor</dt>
-                <dd>{bettorData.bettor}</dd>
+                <dd className="value-with-action">
+                  <span>{bettorData.bettor}</span>
+                  <button
+                    className="inline-copy"
+                    onClick={() => runAction("Copy bettor address", () => copyValue("Bettor address", bettorData.bettor))}
+                  >
+                    Copy
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>Market</dt>
-                <dd>{bettorData.market}</dd>
+                <dd className="value-with-action">
+                  <span>{bettorData.market}</span>
+                  <button
+                    className="inline-copy"
+                    onClick={() => runAction("Copy bettor market address", () => copyValue("Bettor market address", bettorData.market))}
+                  >
+                    Copy
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt>Home Stake</dt>
@@ -891,14 +978,26 @@ export default function HomePage() {
                   <strong>{entry.label}</strong>
                   <p>{entry.detail}</p>
                   {entry.signature ? (
-                    <a
-                      className="history-hash"
-                      href={getSignatureUrl(entry.signature, appConfig.clusterName)}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      {shortenAddress(entry.signature)}
-                    </a>
+                    <>
+                      <a
+                        className="history-hash"
+                        href={getSignatureUrl(entry.signature, appConfig.clusterName)}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {shortenAddress(entry.signature)}
+                      </a>
+                      <button
+                        className="inline-copy history-copy"
+                        onClick={() =>
+                          runAction("Copy signature", () =>
+                            copyValue("Transaction signature", entry.signature!),
+                          )
+                        }
+                      >
+                        Copy
+                      </button>
+                    </>
                   ) : null}
                 </article>
               ))}
@@ -913,14 +1012,26 @@ export default function HomePage() {
         <span className="feedback-label">Status</span>
         <p>{feedback}</p>
         {feedbackSignature ? (
-          <a
-            className="feedback-link"
-            href={getSignatureUrl(feedbackSignature, appConfig.clusterName)}
-            rel="noreferrer"
-            target="_blank"
-          >
-            View transaction {shortenAddress(feedbackSignature)}
-          </a>
+          <div className="feedback-actions">
+            <a
+              className="feedback-link"
+              href={getSignatureUrl(feedbackSignature, appConfig.clusterName)}
+              rel="noreferrer"
+              target="_blank"
+            >
+              View transaction {shortenAddress(feedbackSignature)}
+            </a>
+            <button
+              className="inline-copy"
+              onClick={() =>
+                runAction("Copy signature", () =>
+                  copyValue("Transaction signature", feedbackSignature),
+                )
+              }
+            >
+              Copy Signature
+            </button>
+          </div>
         ) : null}
       </section>
     </main>

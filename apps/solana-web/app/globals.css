@@ -112,6 +112,13 @@ select {
   overflow-wrap: anywhere;
 }
 
+.value-with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .console-grid,
 .data-grid {
   display: grid;
@@ -258,6 +265,20 @@ select {
   margin-top: 18px;
 }
 
+.inline-copy {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 191, 255, 0.18);
+  background: rgba(125, 191, 255, 0.08);
+  color: var(--sky);
+  cursor: pointer;
+}
+
+.inline-copy:hover {
+  transform: translateY(-1px);
+}
+
 .inline-actions {
   margin-top: 0;
 }
@@ -375,6 +396,10 @@ select {
   text-decoration: none;
 }
 
+.history-copy {
+  margin-left: 10px;
+}
+
 .history-hash:hover {
   text-decoration: underline;
 }
@@ -420,6 +445,13 @@ select {
   margin-top: 12px;
   color: var(--gold);
   text-decoration: none;
+}
+
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .feedback-link:hover {
